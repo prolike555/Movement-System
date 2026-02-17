@@ -14,20 +14,28 @@ local humanoid = character:WaitForChild('Humanoid') :: Humanoid
 local animator = humanoid:WaitForChild('Animator') :: Animator
 local humanoidRootPart = character:WaitForChild('HumanoidRootPart') :: BasePart
 
+-- Modulescript that stores the animationIDs of all movement animations.
 local MovementAnimations = require(Animations:WaitForChild("MovementAnimations"))
 
+-- Store the dash key, force, duration, cooldown, and vault cooldown as constants (UPPER_SNAKE_CASE) to make them easy to change later.
 local DASH_KEY = Enum.KeyCode.C
 local DASH_FORCE = 45
 local DASH_DURATION = 0.3
 local DASH_COOLDOWN = 1
+local VAULT_COOLDOWN = 0.5
+
+-- Debounce variables to prevent spamming of dashes and vaults
+local vaultDebounce = os.clock()
 local dashDebounce = os.clock()
 
-local VAULT_COOLDOWN = 0.5
-local vaultDebounce = os.clock()
+-- Boolean varibles to know when the character is atached to a ledge, or if they're able to vault over a part.
 local canVault: boolean = true
 local isLedgeGrabbed: boolean = false
+
+-- Global variable to store the ledge part and the distance between the character and the ledge.
 local ledgePartGlobal: BasePart? = nil
 
+-- Connection for when the character is attached to a ledge, disconnects when the character is not attached to a ledge.
 local ledgeConnection: RBXScriptConnection? = nil
 
 -- Character is airbone if they're standing on air.
@@ -98,7 +106,6 @@ local function stopAnimation(animationID: string)
 		animationTrack:Destroy()
 	end
 end
-
 
 ----------- VAULTING ----------------
 local function vault(vaultedPart: BasePart, wasVaulting: boolean): ()
@@ -206,7 +213,6 @@ local function beginLedgeHold(ledgeOffset: CFrame, ledgePart: BasePart): ()
 	
 	isLedgeGrabbed = true
 	canVault = false
-
 	ledgePartGlobal = ledgePart
 	
 	-- Connect to the RenderStepped event to constantly update the position of the character to be attached to the ledge.
@@ -214,11 +220,10 @@ local function beginLedgeHold(ledgeOffset: CFrame, ledgePart: BasePart): ()
 		if ledgePart then
 			-- Lerp the character's position to the ledge, also anchor and lock rotation so the character cannot move while attached to the ledge.
 			local lerpCFrame = CFrame.new(ledgePart.CFrame.Position, (ledgePart.CFrame * CFrame.new(0, 0, -1)).Position)
-			
+			-- Using lerp to make the character move smoothly across the ledge.
 			humanoidRootPart.CFrame = humanoidRootPart.CFrame:Lerp(lerpCFrame, 0.25)
 			humanoidRootPart.Anchored = true
 			humanoid.AutoRotate = false
-			
 		end
 	end)
 	
@@ -259,10 +264,12 @@ local function endLedgeHold(): ()
 end
 
 local function dashEffect(dashAnimationID: string)
+	
 	local animationTrack = getAnimationTrack(dashAnimationID)
 	local start = os.clock()
 
 	if animationTrack then
+		-- Create a smoke effect that is visible when the character dashes, and use the animation track's length to know how long the smoke effect should run for.
 		local animationLength = animationTrack.Length
 		local particleBlock = Particles.Landing:Clone()
 		particleBlock.Parent = workspace
